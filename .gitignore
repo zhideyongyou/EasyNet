@@ -41,3 +41,10 @@ captures/
 # Keystore files
 *.jks
 
+### Example user template template
+### Example user template
+
+# IntelliJ project files
+.idea
+out
+gen
