@@ -14,8 +14,10 @@ public class MyAPP extends Application {
         super.onCreate();
 
 
-        EasyNet.init(new EasyNet.Builder(this)
+        EasyNet.init(new EasyNet.Config(this)
                 .debug(true)
+                .cookie(true)
+                .ssl(true)
                 .setBaseUrl("http://gank.io/")
                 .addInterceptor(new TestInterceptor())
         );

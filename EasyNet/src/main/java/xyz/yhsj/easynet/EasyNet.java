@@ -3,6 +3,8 @@ package xyz.yhsj.easynet;
 import android.content.Context;
 import android.util.Log;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;
 
@@ -12,7 +14,7 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import xyz.yhsj.easynet.cookie.CookieJarImpl;
-import xyz.yhsj.easynet.cookie.store.MemoryCookieStore;
+import xyz.yhsj.easynet.cookie.store.PersistentCookieStore;
 import xyz.yhsj.easynet.factory.ConverterFactoryPro;
 
 /**
@@ -34,21 +36,21 @@ public class EasyNet {
         }
     }
 
-    public static void init(Builder builder) {
-        instance = new EasyNet(builder);
+    public static void init(Config config) {
+        instance = new EasyNet(config);
     }
 
-    private EasyNet(Builder builder) {
-        this.mContext = builder.appContext;
-        this.debug = builder.debug;
+    private EasyNet(Config config) {
+        this.mContext = config.appContext;
+        this.debug = config.debug;
 
         if (debug) {
-            builder.okhttpBuilder.addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY));
+            config.okhttpBuilder.addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY));
         }
 
-        builder.retrofitBuilder.client(builder.okhttpBuilder.build());
+        config.retrofitBuilder.client(config.okhttpBuilder.build());
 
-        retrofit = builder.retrofitBuilder.build();
+        retrofit = config.retrofitBuilder.build();
 
     }
 
@@ -65,13 +67,15 @@ public class EasyNet {
 
     public <T> T create(Class<?> clazz) {
 
-        Log.w("create", "create: " + retrofit);
+        if (debug) {
+            Log.w("create", "create: " + retrofit);
+        }
 
         return (T) retrofit.create(clazz);
     }
 
 
-    public static class Builder {
+    public static class Config {
         private String bserUrl;
         private Context appContext;
         private OkHttpClient.Builder okhttpBuilder;
@@ -82,7 +86,7 @@ public class EasyNet {
         private boolean isCookie = false;
 
         // 构建的步骤
-        public Builder(Context appContext) {
+        public Config(Context appContext) {
             this.appContext = appContext;
             okhttpBuilder = new OkHttpClient.Builder();
             retrofitBuilder = new Retrofit.Builder();
@@ -97,7 +101,7 @@ public class EasyNet {
          * @param debug
          * @return
          */
-        public Builder debug(boolean debug) {
+        public Config debug(boolean debug) {
             this.debug = debug;
             return this;
         }
@@ -108,16 +112,63 @@ public class EasyNet {
          * @param isCookie
          * @return
          */
-        public Builder cookie(boolean isCookie) {
+        public Config cookie(boolean isCookie) {
             this.isCookie = isCookie;
 
-            okhttpBuilder.cookieJar(new CookieJarImpl(new MemoryCookieStore()))
-                    .hostnameVerifier(new HostnameVerifier() {
-                        @Override
-                        public boolean verify(String hostname, SSLSession session) {
-                            return true;
-                        }
-                    });
+            if (isCookie) {
+                okhttpBuilder.cookieJar(new CookieJarImpl(new PersistentCookieStore(appContext)));
+            }
+            return this;
+        }
+
+        /**
+         * https
+         *
+         * @param isSsl
+         * @return
+         */
+        public Config ssl(boolean isSsl) {
+            if (isSsl) {
+                okhttpBuilder.hostnameVerifier(new HostnameVerifier() {
+                    @Override
+                    public boolean verify(String hostname, SSLSession session) {
+                        return true;
+                    }
+                });
+            }
+            return this;
+        }
+
+        /**
+         * 连接超时
+         *
+         * @param time 秒
+         * @return
+         */
+        public Config connectTimeout(long time) {
+            okhttpBuilder.connectTimeout(time, TimeUnit.SECONDS);
+            return this;
+        }
+
+        /**
+         * 读超时
+         *
+         * @param time 秒
+         * @return
+         */
+        public Config readTimeout(long time) {
+            okhttpBuilder.readTimeout(time, TimeUnit.SECONDS);
+            return this;
+        }
+
+        /**
+         * 写超时
+         *
+         * @param time 秒
+         * @return
+         */
+        public Config writeTimeout(long time) {
+            okhttpBuilder.writeTimeout(time, TimeUnit.SECONDS);
             return this;
         }
 
@@ -127,7 +178,7 @@ public class EasyNet {
          * @param bserUrl
          * @return
          */
-        public Builder setBaseUrl(String bserUrl) {
+        public Config setBaseUrl(String bserUrl) {
             this.bserUrl = bserUrl;
             retrofitBuilder.baseUrl(bserUrl);
             return this;
@@ -139,7 +190,7 @@ public class EasyNet {
          * @param interceptor
          * @return
          */
-        public Builder addInterceptor(Interceptor interceptor) {
+        public Config addInterceptor(Interceptor interceptor) {
             okhttpBuilder.addInterceptor(interceptor);
             return this;
         }
