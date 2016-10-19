@@ -47,7 +47,7 @@ public class AppImpl {
         HashMap<String, Object> params = new HashMap<>();
 //        params.put("wd", "json");
 
-        return appService.get("api/data/福利/2/1", params)
+        return appService.get("https://kyfw.12306.cn/otn/", params)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }

@@ -2,6 +2,8 @@ package xyz.yhsj.easynetdemo;
 
 import android.app.Application;
 
+import java.io.IOException;
+
 import xyz.yhsj.easynet.EasyNet;
 
 /**
@@ -14,13 +16,17 @@ public class MyAPP extends Application {
         super.onCreate();
 
 
-        EasyNet.init(new EasyNet.Config(this)
-                .debug(true)
-                .cookie(true)
-                .ssl(true)
-                .setBaseUrl("http://gank.io/")
-                .addInterceptor(new TestInterceptor())
-        );
+        try {
+            EasyNet.init(new EasyNet.Config(this)
+                    .debug(true)
+                    .cookie(true)
+                    .setCertificates()      //方法二：也可以自己设置https证书（选一种即可）
+                    .setBaseUrl("http://gank.io/")
+                    .addInterceptor(new TestInterceptor())
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
     }

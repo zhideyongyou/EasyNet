@@ -3,6 +3,7 @@ package xyz.yhsj.easynet;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.HostnameVerifier;
@@ -16,6 +17,7 @@ import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import xyz.yhsj.easynet.cookie.CookieJarImpl;
 import xyz.yhsj.easynet.cookie.store.PersistentCookieStore;
 import xyz.yhsj.easynet.factory.ConverterFactoryPro;
+import xyz.yhsj.easynet.https.HttpsUtils;
 
 /**
  * Created by LOVE on 2016/9/7 007.
@@ -43,10 +45,6 @@ public class EasyNet {
     private EasyNet(Config config) {
         this.mContext = config.appContext;
         this.debug = config.debug;
-
-        if (debug) {
-            config.okhttpBuilder.addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY));
-        }
 
         config.retrofitBuilder.client(config.okhttpBuilder.build());
 
@@ -92,6 +90,9 @@ public class EasyNet {
             retrofitBuilder = new Retrofit.Builder();
             retrofitBuilder.addConverterFactory(ConverterFactoryPro.create());
             retrofitBuilder.addCallAdapterFactory(RxJavaCallAdapterFactory.create());
+
+            //默认开启htps
+            okhttpBuilder.hostnameVerifier(new DefaultHostnameVerifier());
         }
 
         /**
@@ -103,6 +104,11 @@ public class EasyNet {
          */
         public Config debug(boolean debug) {
             this.debug = debug;
+
+            if (debug) {
+                okhttpBuilder.addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY));
+            }
+
             return this;
         }
 
@@ -122,20 +128,28 @@ public class EasyNet {
         }
 
         /**
-         * https
-         *
-         * @param isSsl
-         * @return
+         * https的全局访问规则
          */
-        public Config ssl(boolean isSsl) {
-            if (isSsl) {
-                okhttpBuilder.hostnameVerifier(new HostnameVerifier() {
-                    @Override
-                    public boolean verify(String hostname, SSLSession session) {
-                        return true;
-                    }
-                });
-            }
+        public Config setHostnameVerifier(HostnameVerifier hostnameVerifier) {
+            okhttpBuilder.hostnameVerifier(hostnameVerifier);
+            return this;
+        }
+
+        /**
+         * https的全局自签名证书
+         */
+        public Config setCertificates(InputStream... certificates) {
+            HttpsUtils.SSLParams sslParams = HttpsUtils.getSslSocketFactory(null, null, certificates);
+            okhttpBuilder.sslSocketFactory(sslParams.sSLSocketFactory, sslParams.trustManager);
+            return this;
+        }
+
+        /**
+         * https双向认证证书
+         */
+        public Config setCertificates(InputStream bksFile, String password, InputStream... certificates) {
+            HttpsUtils.SSLParams sslParams = HttpsUtils.getSslSocketFactory(bksFile, password, certificates);
+            okhttpBuilder.sslSocketFactory(sslParams.sSLSocketFactory, sslParams.trustManager);
             return this;
         }
 
@@ -195,6 +209,16 @@ public class EasyNet {
             return this;
         }
 
+        /**
+         * 此类是用于主机名验证的基接口。 在握手期间，如果 URL 的主机名和服务器的标识主机名不匹配，
+         * 则验证机制可以回调此接口的实现程序来确定是否应该允许此连接。策略可以是基于证书的或依赖于其他验证方案。
+         * 当验证 URL 主机名使用的默认规则失败时使用这些回调。如果主机名是可接受的，则返回 true
+         */
+        private class DefaultHostnameVerifier implements HostnameVerifier {
+            @Override
+            public boolean verify(String hostname, SSLSession session) {
+                return true;
+            }
+        }
     }
-
 }
