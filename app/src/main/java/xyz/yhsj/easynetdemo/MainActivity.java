@@ -1,15 +1,15 @@
 package xyz.yhsj.easynetdemo;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 
 import rx.functions.Action1;
 
@@ -17,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private AppImpl appimpl;
+    private TextView textView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,7 +26,8 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        appimpl = new AppImpl(this);
+        textView = (TextView) findViewById(R.id.text);
+
 
         appimpl = new AppImpl(this);
 
@@ -37,8 +39,10 @@ public class MainActivity extends AppCompatActivity {
                 appimpl.baidu().subscribe(new Action1<String>() {
                     @Override
                     public void call(String s) {
-                        Log.w(">>>", ">>>" + s);
 
+                        textView.setText(Html.fromHtml(s + ""));
+
+                        Log.w(">>>", ">>>" + s);
 
                     }
                 });
